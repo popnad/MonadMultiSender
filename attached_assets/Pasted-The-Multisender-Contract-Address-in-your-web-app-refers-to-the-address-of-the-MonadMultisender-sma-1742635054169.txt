@@ -1,0 +1,108 @@
+The "Multisender Contract Address" in your web app refers to the address of the MonadMultisender smart contract that you need to deploy on the Monad testnet. This contract is responsible for handling the bulk ERC-20 token transfers, as described in the previous steps. Since I provided the code for the MonadMultisender contract and the steps to deploy it, let me clarify what this address is and how to get it.
+What is the Multisender Contract Address?
+The Multisender Contract Address is the unique address on the Monad testnet where the MonadMultisender smart contract is deployed. This address is generated when you deploy the contract using a tool like Remix, and it’s what your web app interacts with to execute the bulk token transfers. The web app uses this address to call the multisend function on the contract, which then distributes the tokens to the specified recipients.
+Why Don’t You Have the Address Yet?
+From your screenshot, the "Multisender Contract Address" field is empty because you haven’t deployed the MonadMultisender contract yet. The deployment process generates this address, and you’ll need to copy it into the web app’s form to use it.
+Steps to Get the Multisender Contract Address
+Let’s go through the deployment process again, as outlined earlier, to ensure you have the address. Here’s a streamlined version of the steps:
+1. Deploy the MonadMultisender Contract
+The contract code (repeated here for convenience) is:
+solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface IERC20 {
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
+}
+
+contract MonadMultisender {
+    event TokensSent(address indexed token, address indexed sender, address indexed recipient, uint256 amount);
+
+    function multisend(address token, address[] memory recipients, uint256[] memory amounts) public {
+        require(recipients.length == amounts.length, "Recipients and amounts arrays must have equal length");
+        require(recipients.length > 0, "No recipients provided");
+
+        IERC20 tokenContract = IERC20(token);
+        uint256 totalAmount = 0;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAmount += amounts[i];
+        }
+        require(tokenContract.allowance(msg.sender, address(this)) >= totalAmount, "Insufficient allowance");
+        require(tokenContract.balanceOf(msg.sender) >= totalAmount, "Insufficient balance");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            require(recipients[i] != address(0), "Invalid recipient address");
+            require(amounts[i] > 0, "Amount must be greater than 0");
+            bool success = tokenContract.transferFrom(msg.sender, recipients[i], amounts[i]);
+            require(success, "Transfer failed");
+            emit TokensSent(token, msg.sender, recipients[i], amounts[i]);
+        }
+    }
+}
+Deployment Steps:
+Open Remix:
+Go to remix.ethereum.org.
+Create a New File:
+In the Remix file explorer, create a new file (e.g., MonadMultisender.sol) and paste the contract code above.
+Compile the Contract:
+Go to the “Solidity Compiler” tab in Remix.
+Select Solidity version 0.8.0 (or a compatible version).
+Click “Compile MonadMultisender.sol”.
+Set Up MetaMask for Monad Testnet:
+Ensure MetaMask is installed in your browser.
+Add the Monad testnet to MetaMask:
+Network Name: Monad Testnet
+RPC URL: https://testnet.monad.xyz/rpc
+Chain ID: 43113 (verify from docs.monad.xyz if different; the script.js uses 0xa7f1, which is 43113 in hex)
+Currency Symbol: MON
+Get testnet $MON from the faucet at testnet.monad.xyz to pay for gas fees.
+Deploy the Contract:
+Go to the “Deploy & Run Transactions” tab in Remix.
+Set the environment to “Injected Provider - MetaMask”.
+MetaMask will prompt you to connect; select your account.
+Ensure MetaMask is on the Monad testnet.
+In the “Contract” dropdown, select MonadMultisender.
+Click the “Deploy” button.
+MetaMask will pop up to confirm the transaction. Approve it (you’ll need testnet $MON for gas).
+Get the Contract Address:
+Once the transaction is confirmed, Remix will show the deployed contract under “Deployed Contracts” at the bottom of the “Deploy & Run Transactions” tab.
+The contract address will be displayed next to MonadMultisender (e.g., 0x123...abc).
+Copy this address.
+2. Input the Address into the Web App
+Go back to your Replit web app (the one shown in the screenshot).
+In the “Multisender Contract Address” field, paste the address you copied from Remix (e.g., 0x123...abc).
+Troubleshooting the “Connection Failed” Issue
+Your screenshot shows “Connection failed” after clicking “Connect Wallet”. This is likely because MetaMask isn’t properly set up for the Monad testnet, or there’s an issue with the network configuration. Let’s address this:
+Verify MetaMask Setup:
+Ensure MetaMask is installed and you’ve added the Monad testnet as described above.
+Check that you have testnet $MON in your wallet (from the faucet).
+Check the Chain ID:
+The script.js file assumes the Monad testnet Chain ID is 0xa7f1 (43113 in decimal). This was a placeholder based on common testnet Chain IDs, but it might be incorrect.
+Visit docs.monad.xyz to confirm the exact Chain ID for the Monad testnet. If it’s different (e.g., 0x1234), update the monadChainId variable in script.js:
+javascript
+const monadChainId = '0x1234'; // Replace with the correct Chain ID in hex
+Save the file and refresh the Replit web app.
+Reconnect Wallet:
+Click “Connect Wallet” again. MetaMask should prompt you to connect and switch to the Monad testnet if needed.
+Browser Console:
+Open your browser’s developer tools (F12 or right-click → Inspect → Console) and look for error messages when you click “Connect Wallet”. If it says something like “Chain ID mismatch” or “Network not found”, the Chain ID is likely incorrect.
+Next Steps After Getting the Contract Address
+Once you have the Multisender Contract Address and the wallet connection works:
+ERC-20 Token Address:
+You’ve already filled in an ERC-20 token address (0x0FB0DEDF0F83CD1EE3974779Bcb7315F980C714). Ensure this is a valid ERC-20 token on the Monad testnet that you have a balance of. If you don’t have a token, deploy one using OpenZeppelin’s ERC20 template in Remix (e.g., mint yourself some tokens for testing).
+Recipients and Amounts:
+You’ve entered two recipients with amounts (0.001 tokens each). The format looks correct (address,amount). The amounts are in full tokens (e.g., 0.001), and the script converts them to wei assuming 18 decimals. If your token has a different decimal count, you’ll need to adjust the ethers.utils.parseUnits(amount, 18) line in script.js.
+Send Tokens:
+Click “Send Tokens”. The app will:
+Approve the Multisender contract to spend your tokens.
+Call the multisend function to distribute the tokens.
+Update the status (e.g., “Tokens sent successfully” or an error message).
+If You Don’t Want to Deploy the Contract Yourself
+If deploying the contract feels too complex, you could:
+Ask in the Monad Discord (discord.gg/monad) for a pre-deployed Multisender contract on the testnet.
+Hire a developer to deploy it for you and provide the address.
+However, deploying it yourself via Remix is straightforward and gives you full control. Let me know if you need help with any specific step in the deployment process or if the “Connection failed” issue persists after checking the Chain ID!

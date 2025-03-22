@@ -1,0 +1,414 @@
+Let’s create a simple web app for bulk ERC-20 token transfers on the Monad testnet, similar to Multisender.app, using Replit. I’ll guide you through the process, including the language to select in Replit, the code for the web app, and how to interact with the Monad testnet. Since I can’t deploy or interact with the blockchain directly, I’ll provide the complete code and steps for you to run it on Replit.
+Step 1: Choose the Language in Replit
+From the screenshot you provided, Replit offers several language options. For a web app that interacts with the blockchain, we need a frontend (HTML/CSS/JS) to create a user interface and a library to interact with the Ethereum blockchain (like ethers.js). Replit has an option for HTML, CSS, JS, which is perfect for this use case.
+Select in Replit: Choose replit/HTML, CSS, JS from the "Create a new App" dropdown. This will set up a basic web app environment with an index.html, style.css, and script.js.
+Step 2: Overview of the Web App
+The web app will:
+Provide a simple UI to input the ERC-20 token address, a list of recipients, and amounts.
+Use ethers.js to connect to the Monad testnet via MetaMask.
+Interact with the MonadMultisender smart contract (from the previous response) to perform bulk transfers.
+Step 3: Code for the Web App
+Below is the complete code for the web app, split into the three files Replit will use: index.html, style.css, and script.js. I’ll also explain how to deploy the smart contract separately.
+1. index.html
+This file creates the frontend UI with a form for user input and a button to trigger the bulk transfer.
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad Multisender</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Include ethers.js from a CDN -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Monad Testnet Multisender</h1>
+        <p>Connect your wallet, input the token address, and a list of recipients with amounts to send ERC-20 tokens in bulk.</p>
+
+        <button id="connectWallet">Connect Wallet</button>
+        <p id="walletStatus">Wallet not connected</p>
+
+        <form id="multisendForm">
+            <label for="tokenAddress">ERC-20 Token Address:</label>
+            <input type="text" id="tokenAddress" placeholder="0x..." required>
+
+            <label for="recipients">Recipients and Amounts (one per line, format: address,amount):</label>
+            <textarea id="recipients" rows="5" placeholder="0x123...456,1000000000000000000\n0x789...abc,2000000000000000000" required></textarea>
+
+            <label for="contractAddress">Multisender Contract Address:</label>
+            <input type="text" id="contractAddress" placeholder="0x..." required>
+
+            <button type="submit">Send Tokens</button>
+        </form>
+
+        <p id="status">Status: Waiting for action...</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+2. style.css
+This file styles the UI to make it user-friendly.
+css
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+p {
+    margin: 10px 0;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#status {
+    margin-top: 10px;
+    font-weight: bold;
+}
+3. script.js
+This file handles the logic to connect to MetaMask, parse user input, and interact with the MonadMultisender contract.
+javascript
+// ABI of the MonadMultisender contract
+const multisenderABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "internalType": "address[]",
+                "name": "recipients",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "amounts",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "multisend",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "recipient",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "TokensSent",
+        "type": "event"
+    }
+];
+
+// Standard ERC-20 ABI for approve function
+const erc20ABI = [
+    {
+        "constant": false,
+        "inputs": [
+            {
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "approve",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "type": "function"
+    }
+];
+
+// DOM elements
+const connectWalletButton = document.getElementById('connectWallet');
+const walletStatus = document.getElementById('walletStatus');
+const multisendForm = document.getElementById('multisendForm');
+const status = document.getElementById('status');
+
+// Wallet connection
+let provider, signer, account;
+
+connectWalletButton.addEventListener('click', async () => {
+    if (window.ethereum) {
+        try {
+            // Request account access
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            account = accounts[0];
+            walletStatus.textContent = `Connected: ${account}`;
+
+            // Set up ethers provider and signer
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+
+            // Ensure the user is on Monad testnet (update Chain ID as needed)
+            const monadChainId = '0xa7f1'; // Example Chain ID (43113 in hex), verify from docs.monad.xyz
+            const network = await provider.getNetwork();
+            if (network.chainId !== parseInt(monadChainId, 16)) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: monadChainId }],
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: monadChainId,
+                                chainName: 'Monad Testnet',
+                                rpcUrls: ['https://testnet.monad.xyz/rpc'],
+                                nativeCurrency: {
+                                    name: 'MON',
+                                    symbol: 'MON',
+                                    decimals: 18
+                                },
+                                blockExplorerUrls: ['https://testnet.monad.xyz/explorer'] // Update if available
+                            }],
+                        });
+                    } else {
+                        throw switchError;
+                    }
+                }
+            }
+        } catch (error) {
+            walletStatus.textContent = 'Connection failed';
+            console.error(error);
+        }
+    } else {
+        walletStatus.textContent = 'Please install MetaMask';
+    }
+});
+
+// Handle form submission
+multisendForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!provider || !signer) {
+        status.textContent = 'Status: Please connect your wallet first';
+        return;
+    }
+
+    const tokenAddress = document.getElementById('tokenAddress').value;
+    const contractAddress = document.getElementById('contractAddress').value;
+    const recipientsInput = document.getElementById('recipients').value;
+
+    try {
+        status.textContent = 'Status: Processing...';
+
+        // Parse recipients and amounts
+        const lines = recipientsInput.trim().split('\n');
+        const recipients = [];
+        const amounts = [];
+        let totalAmount = ethers.BigNumber.from(0);
+
+        for (const line of lines) {
+            const [address, amount] = line.split(',').map(item => item.trim());
+            if (!ethers.utils.isAddress(address)) {
+                throw new Error(`Invalid address: ${address}`);
+            }
+            const amountBN = ethers.utils.parseUnits(amount, 18); // Assuming 18 decimals, adjust if needed
+            recipients.push(address);
+            amounts.push(amountBN);
+            totalAmount = totalAmount.add(amountBN);
+        }
+
+        // Initialize contracts
+        const tokenContract = new ethers.Contract(tokenAddress, erc20ABI, signer);
+        const multisenderContract = new ethers.Contract(contractAddress, multisenderABI, signer);
+
+        // Check balance
+        const balance = await tokenContract.balanceOf(account);
+        if (balance.lt(totalAmount)) {
+            throw new Error('Insufficient token balance');
+        }
+
+        // Approve tokens
+        status.textContent = 'Status: Approving tokens...';
+        const approveTx = await tokenContract.approve(contractAddress, totalAmount);
+        await approveTx.wait();
+        status.textContent = 'Status: Tokens approved';
+
+        // Execute multisend
+        status.textContent = 'Status: Sending tokens...';
+        const multisendTx = await multisenderContract.multisend(tokenAddress, recipients, amounts);
+        await multisendTx.wait();
+        status.textContent = 'Status: Tokens sent successfully!';
+    } catch (error) {
+        status.textContent = `Status: Error - ${error.message}`;
+        console.error(error);
+    }
+});
+Step 4: Deploy the Smart Contract
+Before using the web app, you need to deploy the MonadMultisender contract on the Monad testnet. Here’s the contract again for reference (same as in the previous response):
+solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface IERC20 {
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
+}
+
+contract MonadMultisender {
+    event TokensSent(address indexed token, address indexed sender, address indexed recipient, uint256 amount);
+
+    function multisend(address token, address[] memory recipients, uint256[] memory amounts) public {
+        require(recipients.length == amounts.length, "Recipients and amounts arrays must have equal length");
+        require(recipients.length > 0, "No recipients provided");
+
+        IERC20 tokenContract = IERC20(token);
+        uint256 totalAmount = 0;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAmount += amounts[i];
+        }
+        require(tokenContract.allowance(msg.sender, address(this)) >= totalAmount, "Insufficient allowance");
+        require(tokenContract.balanceOf(msg.sender) >= totalAmount, "Insufficient balance");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            require(recipients[i] != address(0), "Invalid recipient address");
+            require(amounts[i] > 0, "Amount must be greater than 0");
+            bool success = tokenContract.transferFrom(msg.sender, recipients[i], amounts[i]);
+            require(success, "Transfer failed");
+            emit TokensSent(token, msg.sender, recipients[i], amounts[i]);
+        }
+    }
+}
+Deploy the Contract:
+Open Remix (remix.ethereum.org).
+Create a new file, paste the contract code.
+Compile with Solidity version 0.8.0+.
+In the “Deploy & Run” tab:
+Select “Injected Provider - MetaMask” as the environment.
+Connect MetaMask to the Monad testnet (add it if not already added):
+Network Name: Monad Testnet
+RPC URL: https://testnet.monad.xyz/rpc
+Chain ID: 43113 (verify from docs.monad.xyz if different)
+Currency Symbol: MON
+Get testnet $MON from the faucet at testnet.monad.xyz.
+Deploy the contract and note its address (you’ll need it for the web app).
+Step 5: Run the Web App on Replit
+In Replit, after selecting HTML, CSS, JS, replace the default files with the code above:
+index.html with the HTML code.
+style.css with the CSS code.
+script.js with the JavaScript code.
+Click the “Run” button in Replit. It will launch a web preview (e.g., at a URL like https://your-replit-name.replit.app).
+Open the preview in a browser with MetaMask installed.
+Step 6: Use the Web App
+Connect Wallet: Click “Connect Wallet” to link MetaMask. Ensure you’re on the Monad testnet.
+Input Details:
+ERC-20 Token Address: The address of the token you want to send (deploy one on Monad testnet if needed, e.g., using OpenZeppelin’s ERC20 template).
+Recipients and Amounts: Enter one per line in the format address,amount (e.g., 0x123...456,1 for 1 token, assuming 18 decimals).
+Multisender Contract Address: The address of the deployed MonadMultisender contract.
+Send Tokens: Click the “Send Tokens” button. The app will:
+Approve the token spend.
+Execute the bulk transfer.
+Show the status (success or error).
+Notes and Limitations
+Chain ID: The script.js uses a placeholder Chain ID (0xa7f1 = 43113). Verify the correct Chain ID from docs.monad.xyz and update if needed.
+Decimals: The script assumes 18 decimals for the token. If your token has a different decimal count, adjust the ethers.utils.parseUnits(amount, 18) line in script.js.
+Security: This is a basic app for testnet use. For mainnet, add input validation, error handling, and audit the contract.
+Testing: Test with small batches first (e.g., 2–3 recipients) to ensure gas limits and network stability.
+Why HTML, CSS, JS?
+I chose HTML, CSS, JS in Replit because:
+It’s ideal for a web app with a frontend UI.
+It supports ethers.js for blockchain interaction.
+It’s straightforward to run and test in Replit’s web preview.
+You now have a working Multisender web app for the Monad testnet! Let me know if you run into issues while setting it up.

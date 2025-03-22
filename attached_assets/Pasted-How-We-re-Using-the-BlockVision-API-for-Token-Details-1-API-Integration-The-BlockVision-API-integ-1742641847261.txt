@@ -1,0 +1,58 @@
+How We're Using the BlockVision API for Token Details
+1. API Integration
+The BlockVision API integration is set up in client/src/lib/blockVision.ts. This file:
+
+Sets the base URL to https://api.testnet.monadexplorer.com
+Attempts to read an API key from environment variables with import.meta.env.VITE_BLOCKVISION_API_KEY
+Defines interfaces for token and NFT balances
+Provides two main functions:
+getTokenBalances() - for ERC20 tokens
+getNFTBalances() - for NFT tokens
+2. Main API Endpoint Calls
+We make two main types of API calls to BlockVision:
+
+Token Balances: GET /token/balances/{address}
+
+Returns all ERC20 tokens owned by a wallet address
+Includes token metadata (name, symbol, decimals) and balance information
+NFT Ownership: GET /nft/owned/{address}
+
+Returns all NFTs owned by a wallet address
+Includes NFT metadata (name, symbol, token ID)
+3. Integration with Asset Selector UI
+The AssetSelector.tsx component uses these API functions:
+
+When a user clicks on the asset input field, we check if they have MetaMask connected
+We get the user's wallet address using provider.getSigner() and signer.getAddress()
+We call the appropriate BlockVision API function based on the asset type (token or NFT)
+We map the API response to our internal Asset interface for display in the dropdown
+For tokens, we format the balance using ethers.formatUnits() with the correct decimals
+4. Fallback Method for Manual Contract Addresses
+If a user enters a contract address manually (not from the dropdown):
+
+We check if it's a valid Ethereum address using ethers.isAddress()
+We use the Ethereum Contract API directly through ethers.js:
+const contract = new ethers.Contract(
+  address,
+  [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+  ],
+  provider
+);
+We then call contract methods to get the token metadata:
+const [name, symbol] = await Promise.all([
+  contract.name(),
+  contract.symbol(),
+]);
+5. Environment Variables and API Key
+Currently, the application is looking for a BlockVision API key in the VITE_BLOCKVISION_API_KEY environment variable, but it's not set up yet. You'll need to provide this key for the BlockVision API functionality to work correctly.
+
+6. Use in the Distribution Logic
+Once a token is selected, we use the token's contract address and details in the AddressInput.tsx component for:
+
+Fetching token details including decimals (needed for amount formatting)
+Checking the user's token balance
+Approving token transfers
+Executing the distribution transaction
