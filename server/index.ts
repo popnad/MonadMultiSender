@@ -44,7 +44,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error(err); // Logs the error in case of failure
   });
 
   // Setup Vite in development, serve static files in production
@@ -56,14 +56,8 @@ app.use((req, res, next) => {
 
   // Start the server on port 5000 (or environment port)
   const port = process.env.PORT || 5000;
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    }
-  );
-})();
+  server.listen(port, "0.0.0.0", () => {
+    log(`Serving on port ${port}`);
+  });
+
+})(); // <-- THIS WAS MISSING, NOW FIXED!
